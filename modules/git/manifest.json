@@ -1,0 +1,30 @@
+{
+  "id": "com.platform.git",
+  "name": "Git",
+  "version": "1.0.0",
+  "min_shell_version": "0.1.0",
+  "description": "Cliente Git visual estilo GitKraken. Gestiona repositorios con grafo de commits, branches, tags y operaciones completas usando ~20MB de RAM.",
+  "replaces": ["GitKraken", "Sourcetree", "GitHub Desktop", "Fork"],
+  "ram_typical_mb": 20,
+  "icon_color": "#1DA672",
+  "category": "developer",
+  "permissions": ["storage:local", "notifications"],
+  "resources": {
+    "max_ram_mb": 120,
+    "max_cpu_percent": 15
+  },
+  "entry": {
+    "backend": "bin/git-client"
+  },
+  "ipc": {
+    "exposes": ["git.status", "git.log", "git.branches"],
+    "requires": []
+  },
+  "binaries": {
+    "windows-x64": {
+      "url": "",
+      "sha256": "",
+      "size_bytes": 0
+    }
+  }
+}

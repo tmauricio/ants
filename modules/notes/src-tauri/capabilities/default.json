@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "Default permissions for Notes",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

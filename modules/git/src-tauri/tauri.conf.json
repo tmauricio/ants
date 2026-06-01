@@ -1,0 +1,33 @@
+{
+  "productName": "Git",
+  "version": "1.0.0",
+  "identifier": "com.platform.git",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1425",
+    "beforeDevCommand": "pnpm vite:dev",
+    "beforeBuildCommand": "pnpm vite:build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Git",
+        "width": 1400,
+        "height": 860,
+        "minWidth": 1000,
+        "minHeight": 600,
+        "resizable": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.ico"]
+  }
+}

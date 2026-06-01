@@ -1,0 +1,33 @@
+{
+  "id": "com.platform.notes",
+  "name": "Notes",
+  "version": "1.0.0",
+  "min_shell_version": "0.1.0",
+  "description": "Bloc de notas Markdown con estructura de carpetas. Reemplaza Notion y Obsidian usando ~12MB de RAM.",
+  "replaces": ["Notion", "Obsidian", "Roam Research"],
+  "ram_typical_mb": 12,
+  "icon_color": "#4A9EFF",
+  "category": "productivity",
+  "permissions": [
+    "storage:local",
+    "notifications"
+  ],
+  "resources": {
+    "max_ram_mb": 80,
+    "max_cpu_percent": 10
+  },
+  "entry": {
+    "backend": "bin/notes"
+  },
+  "ipc": {
+    "exposes": ["notes.create", "notes.list", "notes.delete"],
+    "requires": []
+  },
+  "binaries": {
+    "windows-x64": {
+      "url": "",
+      "sha256": "",
+      "size_bytes": 0
+    }
+  }
+}

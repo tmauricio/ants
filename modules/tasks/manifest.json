@@ -1,0 +1,33 @@
+{
+  "id": "com.platform.tasks",
+  "name": "Tasks",
+  "version": "1.0.0",
+  "min_shell_version": "0.1.0",
+  "description": "Tableros Kanban estilo Trello. Reemplaza Trello y Linear usando ~14MB de RAM.",
+  "replaces": ["Trello", "Linear", "Jira", "Asana"],
+  "ram_typical_mb": 14,
+  "icon_color": "#7C3AED",
+  "category": "productivity",
+  "permissions": [
+    "storage:local",
+    "notifications"
+  ],
+  "resources": {
+    "max_ram_mb": 80,
+    "max_cpu_percent": 10
+  },
+  "entry": {
+    "backend": "bin/tasks"
+  },
+  "ipc": {
+    "exposes": ["tasks.create", "tasks.list", "tasks.move"],
+    "requires": []
+  },
+  "binaries": {
+    "windows-x64": {
+      "url": "",
+      "sha256": "",
+      "size_bytes": 0
+    }
+  }
+}

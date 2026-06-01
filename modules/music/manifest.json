@@ -1,0 +1,16 @@
+{
+  "id": "com.platform.music",
+  "name": "Music",
+  "version": "1.0.0",
+  "min_shell_version": "0.1.0",
+  "description": "Reproductor de música local. Sin suscripción, sin nube.",
+  "replaces": ["Spotify", "foobar2000", "Winamp"],
+  "ram_typical_mb": 22,
+  "icon_color": "#1DB954",
+  "category": "media",
+  "permissions": ["storage:local"],
+  "resources": { "max_ram_mb": 80, "max_cpu_percent": 5 },
+  "entry": { "backend": "bin/music" },
+  "ipc": { "exposes": [], "requires": [] },
+  "binaries": { "windows-x64": { "url": "", "sha256": "", "size_bytes": 0 } }
+}

@@ -1,0 +1,45 @@
+{
+  "name": "music",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev --target x86_64-pc-windows-gnu",
+    "build": "tauri build --target x86_64-pc-windows-gnu",
+    "build:debug": "tauri build --debug --target x86_64-pc-windows-gnu",
+    "build:win": "tauri build --target x86_64-pc-windows-msvc",
+    "build:win-gnu": "tauri build --target x86_64-pc-windows-gnu",
+    "build:linux": "tauri build --target x86_64-unknown-linux-gnu",
+    "build:mac": "tauri build --target x86_64-apple-darwin",
+    "build:mac-arm": "tauri build --target aarch64-apple-darwin",
+    "vite:dev": "vite",
+    "vite:build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-opener": "^2.5.4",
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@tauri-apps/cli"
+    ],
+    "approvedBuilds": [
+      "esbuild",
+      "@tauri-apps/cli"
+    ]
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@vitejs/plugin-react": "^4",
+    "typescript": "^5",
+    "vite": "^5"
+  }
+}
