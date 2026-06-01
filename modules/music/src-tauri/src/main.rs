@@ -371,10 +371,9 @@ fn main() {
             let sc_play_pause = Shortcut::new(None::<Modifiers>, Code::MediaPlayPause);
             let sc_next       = Shortcut::new(None::<Modifiers>, Code::MediaTrackNext);
             let sc_prev       = Shortcut::new(None::<Modifiers>, Code::MediaTrackPrevious);
-            let sc_stop       = Shortcut::new(None::<Modifiers>, Code::MediaStop);
 
             app.handle().global_shortcut().on_shortcuts(
-                [sc_play_pause, sc_next, sc_prev, sc_stop],
+                [sc_play_pause, sc_next, sc_prev],
                 move |app_handle, shortcut, _event| {
                     let event = if shortcut.matches(Modifiers::empty(), Code::MediaPlayPause) {
                         "media-play-pause"
@@ -382,14 +381,21 @@ fn main() {
                         "media-next"
                     } else if shortcut.matches(Modifiers::empty(), Code::MediaTrackPrevious) {
                         "media-prev"
-                    } else if shortcut.matches(Modifiers::empty(), Code::MediaStop) {
-                        "media-stop"
                     } else {
                         return;
                     };
                     let _ = app_handle.emit(event, ());
                 },
             )?;
+
+            // MediaStop has no scancode on macOS; register it separately and ignore failures
+            let sc_stop = Shortcut::new(None::<Modifiers>, Code::MediaStop);
+            let _ = app.handle().global_shortcut().on_shortcut(
+                sc_stop,
+                |app_handle, _shortcut, _event| {
+                    let _ = app_handle.emit("media-stop", ());
+                },
+            );
 
             Ok(())
         })

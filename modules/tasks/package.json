@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tauri dev --target x86_64-pc-windows-gnu",
-    "build": "tauri build --target x86_64-pc-windows-gnu",
-    "build:debug": "tauri build --debug --target x86_64-pc-windows-gnu",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:debug": "tauri build --debug",
     "build:win": "tauri build --target x86_64-pc-windows-msvc",
     "build:win-gnu": "tauri build --target x86_64-pc-windows-gnu",
     "build:linux": "tauri build --target x86_64-unknown-linux-gnu",
