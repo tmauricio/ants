@@ -1,0 +1,16 @@
+name: Release · Music
+
+on:
+  push:
+    tags:
+      - 'music/v*'
+
+jobs:
+  build:
+    uses: ./.github/workflows/_release-build.yml
+    with:
+      module: music
+      module_path: modules/music
+      tag: ${{ github.ref_name }}
+      product_name: Music
+    secrets: inherit

@@ -1,10 +1,5 @@
 import { useRef, useEffect } from "react";
 
-const BAR_COUNT = 15;
-const CANVAS_W = 900;   // internal resolution (CSS scales to 100%)
-const CANVAS_H = 200;   // internal resolution
-const DISPLAY_H = 100;  // CSS height in px
-
 // 16 frequency edges → 15 bands, roughly logarithmic from 60 Hz to 18 kHz
 const FREQ_EDGES_HZ = [60, 120, 200, 310, 470, 700, 1000, 1500, 2200, 3200, 4700, 6800, 9800, 13500, 17000, 20000];
 
@@ -12,7 +7,19 @@ function hzToBin(hz: number, sampleRate: number, binCount: number): number {
   return Math.min(binCount - 1, Math.round((hz / (sampleRate / 2)) * binCount));
 }
 
-export default function SpectrumBars({ analyserNode }: { analyserNode: AnalyserNode }) {
+interface SpectrumBarsProps {
+  analyserNode: AnalyserNode;
+  /** CSS height in px (default: 100) */
+  height?: number;
+  /** Number of frequency bands to display (default: 15) */
+  barCount?: number;
+}
+
+export default function SpectrumBars({ analyserNode, height = 100, barCount = 15 }: SpectrumBarsProps) {
+  const BAR_COUNT = Math.min(barCount, FREQ_EDGES_HZ.length - 1);
+  const CANVAS_W = 900;
+  const CANVAS_H = 200;
+  const DISPLAY_H = height;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const smoothRef = useRef<Float32Array>(new Float32Array(BAR_COUNT).fill(0));
@@ -25,10 +32,10 @@ export default function SpectrumBars({ analyserNode }: { analyserNode: AnalyserN
     const binCount = analyserNode.frequencyBinCount;
     const sampleRate = analyserNode.context.sampleRate;
     const data = new Uint8Array(binCount);
-    const smooth = smoothRef.current;
+    const smooth = smoothRef.current = new Float32Array(BAR_COUNT).fill(0);
 
     // Pre-compute bin ranges for each band
-    const bands: Array<[number, number]> = FREQ_EDGES_HZ.slice(0, BAR_COUNT).map((lo, i) => [
+    const bands: Array<[number, number]> = FREQ_EDGES_HZ.slice(0, BAR_COUNT).map((lo: number, i: number) => [
       hzToBin(lo, sampleRate, binCount),
       hzToBin(FREQ_EDGES_HZ[i + 1], sampleRate, binCount),
     ]);
@@ -93,7 +100,7 @@ export default function SpectrumBars({ analyserNode }: { analyserNode: AnalyserN
       ref={canvasRef}
       width={CANVAS_W}
       height={CANVAS_H}
-      style={{ display: "block", width: "100%", height: DISPLAY_H }}
+      style={{ display: "block", width: "100%", height: `${DISPLAY_H}px` }}
     />
   );
 }

@@ -9,6 +9,7 @@ import Queue from "./components/Queue";
 import Player from "./components/Player";
 import SpectrumBars from "./components/SpectrumBars";
 import YouTubePlayer, { type YTHandle } from "./components/YouTubePlayer";
+import WinampSkin from "./components/winamp/WinampSkin";
 
 export type Playlist = { id: number; name: string; created_at: string; track_count: number; };
 export type Track = { id: number; playlist_id: number; position: number; path: string; title: string | null; artist: string | null; album: string | null; duration_sec: number | null; };
@@ -83,6 +84,13 @@ export default function App() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [mainView, setMainView] = useState<MainView>("queue");
+  const [winampMode, setWinampMode] = useState(false);
+
+  // Shared playback state exposed from Player for WinampSkin
+  const [playerCurrentTime, setPlayerCurrentTime] = useState(0);
+  const [playerDuration, setPlayerDuration] = useState(0);
+  const [playerCoverUrl, setPlayerCoverUrl] = useState<string | null>(null);
+  const [playerVolume, setPlayerVolume] = useState(0.8);
   const [scannedTree, setScannedTree] = useState<FileNode | null>(null);
   const [showVisualizer, setShowVisualizer] = useState(false);
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
@@ -90,6 +98,7 @@ export default function App() {
 
   // YouTube state
   const ytRef = useRef<YTHandle>(null);
+  const playerSeekRef = useRef<((t: number) => void) | null>(null);
   const [showYTVideo, setShowYTVideo] = useState(false);
   const [ytVideoHeight, setYtVideoHeight] = useState(124); // default 16:9 at 220px width
   const ytResizing = useRef(false);
@@ -455,6 +464,84 @@ const removeFromQueue = useCallback((index: number) => {
   ) : null;
 
 
+  // ── Shared WinAmp props ───────────────────────────────────────────────────
+  const winampProps = {
+    track: currentTrack,
+    isPlaying,
+    currentTime: playerCurrentTime,
+    duration: playerDuration,
+    coverUrl: playerCoverUrl,
+    volume: playerVolume,
+    analyserNode,
+    onPlay: () => setIsPlaying(true),
+    onPause: () => setIsPlaying(false),
+    onNext: handleNext,
+    onPrev: handlePrev,
+    onSeek: (t: number) => { playerSeekRef.current?.(t); setPlayerCurrentTime(t); },
+    onVolumeChange: setPlayerVolume,
+    queue,
+    queueIndex,
+    onPlayQueueItem: handlePlayQueueItem,
+    onRemoveFromQueue: removeFromQueue,
+    playlists,
+    selectedPlaylist,
+    playlistTracks,
+    onSelectPlaylist: selectPlaylist,
+    onPlayPlaylist: handlePlayPlaylistById,
+    onAddPlaylistToQueue: handleAddPlaylistToQueueById,
+    onScanFolder: handleScanFolder,
+    onPlayTrack: (t: import("./App").Track) => {
+      const item = trackToQueueItem(t);
+      setQueue([item]);
+      setQueueIndex(0);
+      setIsPlaying(true);
+    },
+    onAddTrackToQueue: (t: import("./App").Track) => {
+      const item = trackToQueueItem(t);
+      setQueue((prev) => prev.some((i) => i.path === item.path) ? prev : [...prev, item]);
+      setQueueIndex((prev) => (prev === -1 ? 0 : prev));
+    },
+    onRemoveFromPlaylist: handleRemoveFromPlaylist,
+    onToggleMode: () => setWinampMode(false),
+  };
+
+  // ── Hidden audio engine (always mounted) ─────────────────────────────────
+  const hiddenPlayer = (
+    <div style={{ display: "none" }}>
+      <Player
+        track={currentTrack}
+        isPlaying={isPlaying}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onNext={handleNext}
+        onPrev={handlePrev}
+        onEnded={handleNext}
+        showVisualizer={showVisualizer}
+        onToggleVisualizer={() => setShowVisualizer((v) => !v)}
+        onAnalyserReady={handleAnalyserReady}
+        ytRef={ytRef}
+        showYTVideo={false}
+        onToggleYTVideo={() => {}}
+        onTimeUpdate={(ct, dur) => { setPlayerCurrentTime(ct); setPlayerDuration(dur); }}
+        onCoverChange={setPlayerCoverUrl}
+        externalVolume={playerVolume}
+        onVolumeChange={setPlayerVolume}
+        seekRef={playerSeekRef}
+      />
+    </div>
+  );
+
+  // ── WinAmp mode: full-screen, no modern UI ────────────────────────────────
+  if (winampMode) {
+    return (
+      <div style={{ height: "100vh", overflow: "hidden" }}>
+        {hiddenPlayer}
+        <WinampSkin {...winampProps} />
+      </div>
+    );
+  }
+
+  // ── Modern mode ───────────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", background: "var(--bg-base)", position: "relative" }}>
       <div style={{ display: "flex", flex: 1, overflow: "hidden", minHeight: 0 }}>
@@ -495,9 +582,7 @@ const removeFromQueue = useCallback((index: number) => {
             <button style={mainView === "filebrowser" ? topBarBtnActive : topBarBtn} onClick={() => { if (scannedTree) setMainView("filebrowser"); else handleScanFolder(); }}>
               📁 Archivos
             </button>
-            <button style={topBarBtn} onClick={handleScanFolder}>
-              Scan folder
-            </button>
+            <button style={topBarBtn} onClick={handleScanFolder}>Scan folder</button>
             <button style={topBarBtn} onClick={() => { setShowURLModal(true); setUrlError(null); setUrlInput(""); }}>
               + YouTube URL
             </button>
@@ -506,7 +591,14 @@ const removeFromQueue = useCallback((index: number) => {
                 Clear queue
               </button>
             )}
-            <span style={{ marginLeft: "auto", fontSize: 12, color: "var(--text-muted)" }}>
+            <button
+              style={{ ...topBarBtn, marginLeft: "auto", background: "#1a1a2a", borderColor: "#3a3a6a", color: "#88aaff", fontFamily: "monospace", letterSpacing: "0.05em" }}
+              onClick={() => setWinampMode(true)}
+              title="Cambiar al modo WinAmp clásico"
+            >
+              🎵 WINAMP
+            </button>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
               {mainView === "queue" && queue.length > 0 && `${queue.length} songs in queue`}
               {mainView === "playlist" && selectedPlaylist && `${playlistTracks.length} songs`}
             </span>
@@ -515,49 +607,29 @@ const removeFromQueue = useCallback((index: number) => {
           {/* Content */}
           <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
             {mainView === "queue" && (
-              <Queue
-                items={queue}
-                currentIndex={queueIndex}
-                onPlay={handlePlayQueueItem}
-                onRemove={removeFromQueue}
-              />
+              <Queue items={queue} currentIndex={queueIndex} onPlay={handlePlayQueueItem} onRemove={removeFromQueue} />
             )}
             {mainView === "playlist" && (
               <TrackList
                 tracks={playlistTracks}
                 currentPath={currentTrack?.path ?? null}
-                onPlay={(t) => {
-                  const item = trackToQueueItem(t);
-                  setQueue([item]);
-                  setQueueIndex(0);
-                  setIsPlaying(true);
-                }}
+                onPlay={(t) => { const item = trackToQueueItem(t); setQueue([item]); setQueueIndex(0); setIsPlaying(true); }}
                 onRemove={handleRemoveFromPlaylist}
                 onAddToQueue={(t) => {
                   const item = trackToQueueItem(t);
-                  setQueue((prev) => {
-                    if (prev.some((i) => i.path === item.path)) return prev;
-                    return [...prev, item];
-                  });
+                  setQueue((prev) => { if (prev.some((i) => i.path === item.path)) return prev; return [...prev, item]; });
                   setQueueIndex((prev) => (prev === -1 ? 0 : prev));
                 }}
               />
             )}
             {mainView === "filebrowser" && scannedTree && (
-              <FileTree
-                node={scannedTree}
-                onAddToQueue={addPathsToQueue}
-                onAddToPlaylist={selectedPlaylist ? handleAddFolderToPlaylist : undefined}
-                playlistName={selectedPlaylist?.name ?? null}
-              />
+              <FileTree node={scannedTree} onAddToQueue={addPathsToQueue} onAddToPlaylist={selectedPlaylist ? handleAddFolderToPlaylist : undefined} playlistName={selectedPlaylist?.name ?? null} />
             )}
             {mainView === "filebrowser" && !scannedTree && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 12, color: "var(--text-secondary)" }}>
                 <span style={{ fontSize: 40 }}>📁</span>
                 <p style={{ fontSize: 14 }}>Scan a folder to explore your files</p>
-                <button style={{ ...topBarBtn, background: "var(--accent)", border: "none", color: "#000", fontWeight: 700, fontSize: 13, padding: "8px 18px" }} onClick={handleScanFolder}>
-                  Select folder
-                </button>
+                <button style={{ ...topBarBtn, background: "var(--accent)", border: "none", color: "#000", fontWeight: 700, fontSize: 13, padding: "8px 18px" }} onClick={handleScanFolder}>Select folder</button>
               </div>
             )}
           </div>
@@ -567,9 +639,7 @@ const removeFromQueue = useCallback((index: number) => {
             <div style={{ flexShrink: 0, background: "var(--bg-elevated)", borderTop: "1px solid var(--border)", padding: "10px 20px 6px", zIndex: 10, position: "relative" }}>
               {analyserNode
                 ? <SpectrumBars analyserNode={analyserNode} />
-                : <div style={{ height: 100, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: 12 }}>
-                    Play a song to activate the visualizer
-                  </div>
+                : <div style={{ height: 100, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: 12 }}>Play a song to activate the visualizer</div>
               }
             </div>
           )}
@@ -589,6 +659,11 @@ const removeFromQueue = useCallback((index: number) => {
             ytRef={ytRef}
             showYTVideo={showYTVideo}
             onToggleYTVideo={() => setShowYTVideo((v) => !v)}
+            onTimeUpdate={(ct, dur) => { setPlayerCurrentTime(ct); setPlayerDuration(dur); }}
+            onCoverChange={setPlayerCoverUrl}
+            externalVolume={playerVolume}
+            onVolumeChange={setPlayerVolume}
+            seekRef={playerSeekRef}
           />
         </div>
       </div>

@@ -1,0 +1,16 @@
+name: Release · Shell
+
+on:
+  push:
+    tags:
+      - 'shell/v*'
+
+jobs:
+  build:
+    uses: ./.github/workflows/_release-build.yml
+    with:
+      module: shell
+      module_path: shell
+      tag: ${{ github.ref_name }}
+      product_name: Platform Shell
+    secrets: inherit
