@@ -1,0 +1,16 @@
+name: Release · Notes
+
+on:
+  push:
+    tags:
+      - 'notes/v*'
+
+jobs:
+  build:
+    uses: ./.github/workflows/_release-build.yml
+    with:
+      module: notes
+      module_path: modules/notes
+      tag: ${{ github.ref_name }}
+      product_name: Notes
+    secrets: inherit

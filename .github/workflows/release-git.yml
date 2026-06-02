@@ -1,0 +1,16 @@
+name: Release · Git
+
+on:
+  push:
+    tags:
+      - 'git/v*'
+
+jobs:
+  build:
+    uses: ./.github/workflows/_release-build.yml
+    with:
+      module: git
+      module_path: modules/git
+      tag: ${{ github.ref_name }}
+      product_name: Git
+    secrets: inherit

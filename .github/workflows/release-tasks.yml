@@ -1,0 +1,16 @@
+name: Release · Tasks
+
+on:
+  push:
+    tags:
+      - 'tasks/v*'
+
+jobs:
+  build:
+    uses: ./.github/workflows/_release-build.yml
+    with:
+      module: tasks
+      module_path: modules/tasks
+      tag: ${{ github.ref_name }}
+      product_name: Tasks
+    secrets: inherit

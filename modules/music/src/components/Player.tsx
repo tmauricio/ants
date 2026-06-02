@@ -24,12 +24,23 @@ interface PlayerProps {
   ytRef: RefObject<YTHandle | null>;
   showYTVideo: boolean;
   onToggleYTVideo: () => void;
+  /** Called whenever playback time / duration changes */
+  onTimeUpdate?: (currentTime: number, duration: number) => void;
+  /** Called whenever the cover art changes */
+  onCoverChange?: (url: string | null) => void;
+  /** External volume control (0–1). When provided, Player uses it as source of truth. */
+  externalVolume?: number;
+  /** Called when internal volume slider changes */
+  onVolumeChange?: (v: number) => void;
+  /** Ref that will be filled with a `seekTo(seconds)` function for external control */
+  seekRef?: React.MutableRefObject<((t: number) => void) | null>;
 }
 
 export default function Player({
   track, isPlaying, onPlay, onPause, onNext, onPrev, onEnded,
   showVisualizer, onToggleVisualizer, onAnalyserReady,
   ytRef, showYTVideo, onToggleYTVideo,
+  onTimeUpdate, onCoverChange, externalVolume, onVolumeChange, seekRef,
 }: PlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [narrow, setNarrow] = useState(false);
@@ -53,8 +64,13 @@ export default function Player({
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.8);
+  const [volume, setVolume] = useState(externalVolume ?? 0.8);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+
+  // Sync volume when external changes
+  useEffect(() => {
+    if (externalVolume !== undefined) setVolume(externalVolume);
+  }, [externalVolume]);
 
   const isYT = !!track?.youtubeId;
 
@@ -66,9 +82,11 @@ export default function Player({
     ytPollRef.current = setInterval(() => {
       const yt = ytRef.current;
       if (!yt) return;
-      setCurrentTime(yt.getCurrentTime());
+      const ct = yt.getCurrentTime();
       const dur = yt.getDuration();
+      setCurrentTime(ct);
       if (dur > 0) setDuration(dur);
+      onTimeUpdate?.(ct, dur > 0 ? dur : 0);
     }, 500);
     return () => { if (ytPollRef.current) clearInterval(ytPollRef.current); };
   }, [isYT, isPlaying, ytRef]);
@@ -129,8 +147,8 @@ export default function Player({
     audio.play().catch((e) => console.warn("Autoplay blocked:", e));
     audioCtxRef.current?.resume();
     invoke<string | null>("get_cover_art", { path: track.path })
-      .then((d) => setCoverUrl(d ?? null))
-      .catch(() => setCoverUrl(null));
+      .then((d) => { setCoverUrl(d ?? null); onCoverChange?.(d ?? null); })
+      .catch(() => { setCoverUrl(null); onCoverChange?.(null); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track]);
 
@@ -161,11 +179,20 @@ export default function Player({
 
   const handlePlayPause = () => { if (isPlaying) onPause(); else onPlay(); };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const t = parseFloat(e.target.value);
+  const seekTo = useCallback((t: number) => {
     setCurrentTime(t);
     if (isYT) ytRef.current?.seekTo(t);
     else if (audioRef.current) audioRef.current.currentTime = t;
+  }, [isYT, ytRef]);
+
+  // Expose seekTo externally
+  useEffect(() => {
+    if (seekRef) seekRef.current = seekTo;
+    return () => { if (seekRef) seekRef.current = null; };
+  }, [seekRef, seekTo]);
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    seekTo(parseFloat(e.target.value));
   };
 
   const title = track
@@ -239,7 +266,7 @@ export default function Player({
       <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
         <span style={{ fontSize: 13, color: "var(--text-muted)" }}>🔊</span>
         <input type="range" min={0} max={1} step={0.01} value={volume}
-          onChange={(e) => setVolume(parseFloat(e.target.value))}
+          onChange={(e) => { const v = parseFloat(e.target.value); setVolume(v); onVolumeChange?.(v); }}
           style={{ width: 60, cursor: "pointer", accentColor: "var(--accent)" }}
         />
       </div>
@@ -279,8 +306,18 @@ export default function Player({
       )}
 
       <audio ref={audioRef} crossOrigin="anonymous" style={{ display: "none" }}
-        onTimeUpdate={() => audioRef.current && setCurrentTime(audioRef.current.currentTime)}
-        onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)}
+        onTimeUpdate={() => {
+          if (!audioRef.current) return;
+          const ct = audioRef.current.currentTime;
+          setCurrentTime(ct);
+          onTimeUpdate?.(ct, audioRef.current.duration || 0);
+        }}
+        onLoadedMetadata={() => {
+          if (!audioRef.current) return;
+          const dur = audioRef.current.duration;
+          setDuration(dur);
+          onTimeUpdate?.(audioRef.current.currentTime, dur);
+        }}
         onEnded={onEnded}
         preload="auto"
       />
