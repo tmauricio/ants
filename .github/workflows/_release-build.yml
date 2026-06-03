@@ -25,6 +25,8 @@ jobs:
   # ── 1. Create the draft release once ──────────────────────────────────────
   create-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       release_id: ${{ steps.create.outputs.result }}
 
@@ -95,6 +97,8 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     name: Build · ${{ matrix.os_label }}
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout

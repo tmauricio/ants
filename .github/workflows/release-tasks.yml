@@ -5,6 +5,9 @@ on:
     tags:
       - 'tasks/v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     uses: ./.github/workflows/_release-build.yml
