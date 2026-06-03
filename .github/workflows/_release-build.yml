@@ -1,5 +1,6 @@
-# Reusable workflow — called by each module's release workflow
-# Builds the Tauri app on Windows, Linux and macOS, then publishes a GitHub Release.
+# Reusable workflow — called by each module's release workflow.
+# Stage 1: create the draft GitHub Release (single job).
+# Stage 2: build on Windows / Linux / macOS in parallel and upload artifacts.
 
 name: _release-build
 
@@ -9,41 +10,84 @@ on:
       module:
         required: true
         type: string
-        description: "Module name (e.g. music, tasks, shell)"
       module_path:
         required: true
         type: string
-        description: "Path from repo root to the module (e.g. modules/music)"
       tag:
         required: true
         type: string
-        description: "Full git tag that triggered this run (e.g. music/v1.2.0)"
       product_name:
         required: true
         type: string
-        description: "Tauri productName (e.g. Music, Tasks)"
 
 jobs:
+
+  # ── 1. Create the draft release once ──────────────────────────────────────
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create.outputs.result }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create draft GitHub Release
+        id: create
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag  = '${{ inputs.tag }}';
+            const name = '${{ inputs.product_name }} ' + tag;
+            const body = [
+              '## ${{ inputs.product_name }} — ' + tag,
+              '',
+              '### Download',
+              '| Platform | File |',
+              '|----------|------|',
+              '| Windows  | `.msi` installer or `-setup.exe` |',
+              '| Linux    | `.AppImage`, `.deb` or `.rpm` |',
+              '| macOS    | `.dmg` (universal: Intel + Apple Silicon) |',
+              '',
+              '### Changelog',
+              '_See commit history for details._',
+            ].join('\n');
+
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              tag_name:   tag,
+              name,
+              body,
+              draft:      true,
+              prerelease: false,
+            });
+            return data.id;
+
+  # ── 2. Build on each platform and upload to the draft release ─────────────
   build:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
         include:
-          # ── Windows ──────────────────────────────────────────────────────
           - platform: windows-latest
             rust_target: x86_64-pc-windows-msvc
             rust_toolchain_targets: x86_64-pc-windows-msvc
             os_label: windows
 
-          # ── Linux ────────────────────────────────────────────────────────
           - platform: ubuntu-22.04
             rust_target: x86_64-unknown-linux-gnu
             rust_toolchain_targets: x86_64-unknown-linux-gnu
             os_label: linux
 
-          # ── macOS universal (Intel + Apple Silicon) ───────────────────────
-          # rustup doesn't have a "universal-apple-darwin" target — install both
-          # real targets; tauri-build handles lipo to merge them.
+          # rustup doesn't have "universal-apple-darwin" — install both real
+          # targets; tauri-build uses lipo to combine them.
           - platform: macos-latest
             rust_target: universal-apple-darwin
             rust_toolchain_targets: aarch64-apple-darwin,x86_64-apple-darwin
@@ -53,11 +97,10 @@ jobs:
     name: Build · ${{ matrix.os_label }}
 
     steps:
-      # ── Checkout ──────────────────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── System deps (Linux only) ──────────────────────────────────────────
+      # ── Linux system deps ──────────────────────────────────────────────────
       - name: Install Linux system dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -70,11 +113,7 @@ jobs:
             libgtk-3-dev \
             libssl-dev
 
-      # ── Override local dev configs that are Windows-GNU specific ─────────
-      # rust-toolchain.toml uses "stable-x86_64-pc-windows-gnu" for local dev
-      # on Windows without MSVC. On CI we always use plain "stable".
-      # .cargo/config.toml forces target = x86_64-pc-windows-gnu locally;
-      # on CI each job passes --target explicitly so we clear the override.
+      # ── Override local dev Rust config (Windows GNU → plain stable for CI) ─
       - name: Reset rust-toolchain.toml and cargo config for CI
         shell: bash
         run: |
@@ -94,7 +133,7 @@ jobs:
         with:
           workspaces: ${{ inputs.module_path }}/src-tauri -> target
 
-      # ── Node + pnpm ───────────────────────────────────────────────────────
+      # ── Node + pnpm ────────────────────────────────────────────────────────
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
@@ -109,27 +148,12 @@ jobs:
         working-directory: ${{ inputs.module_path }}
         run: pnpm install
 
-      # ── Build & Release ───────────────────────────────────────────────────
-      - name: Build Tauri app and publish release
+      # ── Build & upload artifacts to the pre-created draft release ──────────
+      - name: Build Tauri app and upload artifacts
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: ${{ inputs.module_path }}
-          tagName: ${{ inputs.tag }}
-          releaseName: "${{ inputs.product_name }} ${{ inputs.tag }}"
-          releaseBody: |
-            ## ${{ inputs.product_name }} — ${{ inputs.tag }}
-
-            ### Download
-            | Platform | File |
-            |----------|------|
-            | Windows  | `.msi` or `-setup.exe` |
-            | Linux    | `.AppImage` or `.deb` |
-            | macOS    | `.dmg` |
-
-            ### Changelog
-            _See commit history for details._
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           args: --target ${{ matrix.rust_target }}
