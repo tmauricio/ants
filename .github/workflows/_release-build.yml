@@ -32,16 +32,21 @@ jobs:
           # ── Windows ──────────────────────────────────────────────────────
           - platform: windows-latest
             rust_target: x86_64-pc-windows-msvc
+            rust_toolchain_targets: x86_64-pc-windows-msvc
             os_label: windows
 
           # ── Linux ────────────────────────────────────────────────────────
           - platform: ubuntu-22.04
             rust_target: x86_64-unknown-linux-gnu
+            rust_toolchain_targets: x86_64-unknown-linux-gnu
             os_label: linux
 
-          # ── macOS (Intel + Apple Silicon via universal binary) ────────────
+          # ── macOS universal (Intel + Apple Silicon) ───────────────────────
+          # rustup doesn't have a "universal-apple-darwin" target — install both
+          # real targets; tauri-build handles lipo to merge them.
           - platform: macos-latest
             rust_target: universal-apple-darwin
+            rust_toolchain_targets: aarch64-apple-darwin,x86_64-apple-darwin
             os_label: macos
 
     runs-on: ${{ matrix.platform }}
@@ -69,7 +74,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.rust_target }}
+          targets: ${{ matrix.rust_toolchain_targets }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -77,15 +82,15 @@ jobs:
           workspaces: ${{ inputs.module_path }}/src-tauri -> target
 
       # ── Node + pnpm ───────────────────────────────────────────────────────
-      - name: Setup Node 20
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 9
 
       - name: Install frontend dependencies
         working-directory: ${{ inputs.module_path }}
