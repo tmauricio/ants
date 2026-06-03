@@ -1,6 +1,6 @@
 {
   "name": "notes",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -27,9 +27,15 @@
     "react-dom": "^18"
   },
   "pnpm": {
-    "ignoredBuiltDependencies": ["esbuild"],
-    "onlyBuiltDependencies": ["@tauri-apps/cli"],
-    "approvedBuilds": ["@tauri-apps/cli"]
+    "ignoredBuiltDependencies": [
+      "esbuild"
+    ],
+    "onlyBuiltDependencies": [
+      "@tauri-apps/cli"
+    ],
+    "approvedBuilds": [
+      "@tauri-apps/cli"
+    ]
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
