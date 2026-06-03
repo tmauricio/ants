@@ -70,6 +70,19 @@ jobs:
             libgtk-3-dev \
             libssl-dev
 
+      # ── Override local dev configs that are Windows-GNU specific ─────────
+      # rust-toolchain.toml uses "stable-x86_64-pc-windows-gnu" for local dev
+      # on Windows without MSVC. On CI we always use plain "stable".
+      # .cargo/config.toml forces target = x86_64-pc-windows-gnu locally;
+      # on CI each job passes --target explicitly so we clear the override.
+      - name: Reset rust-toolchain.toml and cargo config for CI
+        shell: bash
+        run: |
+          printf '[toolchain]\nchannel = "stable"\n' \
+            > ${{ inputs.module_path }}/rust-toolchain.toml
+          printf '[build]\n' \
+            > ${{ inputs.module_path }}/.cargo/config.toml
+
       # ── Rust ──────────────────────────────────────────────────────────────
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
