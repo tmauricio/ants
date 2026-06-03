@@ -1,6 +1,6 @@
 {
   "name": "git-client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -26,8 +26,14 @@
     "react-dom": "^18"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "@tauri-apps/cli"],
-    "approvedBuilds": ["esbuild", "@tauri-apps/cli"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@tauri-apps/cli"
+    ],
+    "approvedBuilds": [
+      "esbuild",
+      "@tauri-apps/cli"
+    ]
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
